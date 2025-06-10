@@ -1,0 +1,33 @@
+#login{
+    background-color: rgb(255, 255, 255);
+    
+}
+.Email-label{
+  font-size: 17px;
+  color: #333;
+  font-weight: bold;
+}
+.input{
+    width: 100%;
+    padding: 10px;
+    height: 45px;
+    margin: 5px 0;
+    box-sizing: border-box;
+    border: 1px solid #c9c8c873;
+    border-radius: 4px;
+}
+h2{
+    margin-bottom: 10%;
+}
+.btn-submit{
+    margin: 20px 0 10px 0;
+  background-color: #151717;
+  border: none;
+  color: white;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 10px;
+  height: 50px;
+  width: 100%;
+  cursor: pointer;
+}
