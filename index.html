@@ -62,9 +62,9 @@
         <img class="imgm home-menu-img" src="public/Home.webp" alt="">
          <button onclick="mostrarProductos()">Home</button>
     </div>
-    <button onclick="mostrarDashboard()">Dashboard</button>
-    <button onclick="mostrarAdminPanel()">Admin</button>
-    <button onclick="cerrarSesion()">Cerrar Sesión</button>
+    <button id="btn-dashboard" onclick="mostrarDashboard()">Dashboard</button>
+  <button id="btn-admin" onclick="mostrarAdminPanel()">Admin</button>
+  <button onclick="cerrarSesion()">Cerrar Sesión</button>
   </footer>
 
   <script>
@@ -117,6 +117,8 @@
           .where('email', '==', email)
           .where('password', '==', password)
           .get();
+           console.log("Login correcto");
+          window.location.href = "hola.html"; // redirige a index.html
 
         if (snapshot.empty) {
           document.getElementById('login-error').textContent = 'Credenciales inválidas';
