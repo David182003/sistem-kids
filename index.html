@@ -6,78 +6,65 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-
-    header {
-      background: #6200ea;
-      color: white;
-      text-align: center;
-      padding: 1rem;
-    }
-
-    #productos, #dashboard {
-      flex: 1;
-      overflow-y: auto;
-      padding: 1rem;
-    }
-
-    .producto {
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      margin-bottom: 1rem;
-      padding: 1rem;
-      text-align: center;
-    }
-
-    .producto img {
-      width: 100%;
-      max-width: 300px;
-      border-radius: 8px;
-    }
-
-    .timer {
-      font-size: 1.2rem;
-      font-weight: bold;
-      margin: 0.5rem 0;
-      color: #d32f2f;
-    }
-
-    footer {
-      display: flex;
-      justify-content: space-around;
-      padding: 1rem;
-      background: #eee;
-      border-top: 1px solid #ccc;
-    }
-
-    footer button {
-      background: none;
-      border: none;
-      font-size: 1rem;
-    }
-
-    .hidden {
-      display: none;
-    }
-  </style>
+  <link rel="stylesheet" href="src/home.css">
+  <link rel="stylesheet" href="src/form.css">
 </head>
 <body>
-  
 
-  <div id="productos"></div>
+<div id="login">
+    <h2>Iniciar Sesión</h2>
+    <label for="email" class="Email-label">Email:</label><br>
+    <input type="email" class="input email-input" id="email" placeholder="Correo"><br><br>
+    <label for="email" class="Email-label">Password:</label><br>
+    <input type="password" class="input password-input" id="password" placeholder="Contraseña"><br><br>
+    <button onclick="login()" class="btn-submit">Ingresar</button>
+    <p>¿No tienes cuenta? <a href="#" onclick="toggleRegistro(true)">Regístrate</a></p>
+    <p id="login-error" style="color:red;"></p>
+  </div>
+
+
+
+
+
+
+
+  <div id="register" class="hidden">
+    <h2>Registro</h2>
+    <input type="email" id="reg-email" placeholder="Correo"><br><br>
+    <input type="password" id="reg-password" placeholder="Contraseña"><br><br>
+    <select id="reg-rol">
+      <option value="empleado">Empleado</option>
+      <option value="admin">Administrador</option>
+    </select><br><br>
+    <button onclick="registrar()">Registrarse</button>
+    <p>¿Ya tienes cuenta? <a href="#" onclick="toggleRegistro(false)">Inicia Sesión</a></p>
+    <p id="reg-error" style="color:red;"></p>
+  </div>
+
+  <div id="productos" class="hidden"></div>
   <div id="dashboard" class="hidden"></div>
+  <div id="admin-panel" class="hidden">
+    <h2>Agregar Nuevo Carro</h2>
+    <input id="nuevo-nombre" placeholder="Nombre"><br><br>
+    <input id="nueva-descripcion" placeholder="Descripción"><br><br>
+    <input id="nueva-imagen" placeholder="URL de Imagen" type="file"><br><br>
+    <select id="nuevo-tipo">
+      <option value="carro">Carro (15min/10soles)</option>
+      <option value="moto">Moto (10min/5soles)</option>
+    </select><br><br>
+    <button onclick="agregarVehiculo()">Agregar Vehículo</button>
+    <p id="admin-msg"></p>
+  </div>
 
-  <footer>
-    <button onclick="mostrarProductos()">Home</button>
+  <footer class="hidden" id="menu">
+    <div class="container-menu">
+        
+        <img class="imgm home-menu-img" src="public/Home.webp" alt="">
+         <button onclick="mostrarProductos()">Home</button>
+    </div>
     <button onclick="mostrarDashboard()">Dashboard</button>
+    <button onclick="mostrarAdminPanel()">Admin</button>
+    <button onclick="cerrarSesion()">Cerrar Sesión</button>
   </footer>
 
   <script>
@@ -85,7 +72,7 @@
       apiKey: "AIzaSyCwt9dyCf5iF13R2nhar6F2pKIUkT3Om7Q",
       authDomain: "paguinasweb-14611.firebaseapp.com",
       projectId: "paguinasweb-14611",
-      storageBucket: "paguinasweb-14611.firebasestorage.app",
+      storageBucket: "paguinasweb-14611.appspot.com",
       messagingSenderId: "1083919701171",
       appId: "1:1083919701171:web:89d0063a1f9e6e357c4cc6"
     };
@@ -93,9 +80,72 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+    let currentUser = null;
+    let currentUserRole = null;
+
+    function toggleRegistro(show) {
+      document.getElementById('login').classList.toggle('hidden', show);
+      document.getElementById('register').classList.toggle('hidden', !show);
+    }
+
+    async function registrar() {
+      const email = document.getElementById('reg-email').value;
+      const password = document.getElementById('reg-password').value;
+      const rol = document.getElementById('reg-rol').value;
+
+      try {
+        const snapshot = await db.collection('usuarios').where('email', '==', email).get();
+        if (!snapshot.empty) {
+          document.getElementById('reg-error').textContent = 'El usuario ya existe';
+          return;
+        }
+
+        await db.collection('usuarios').add({ email, password, rol });
+        alert('Usuario registrado con éxito');
+        toggleRegistro(false);
+      } catch (err) {
+        document.getElementById('reg-error').textContent = 'Error al registrar usuario';
+      }
+    }
+
+    async function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const snapshot = await db.collection('usuarios')
+          .where('email', '==', email)
+          .where('password', '==', password)
+          .get();
+
+        if (snapshot.empty) {
+          document.getElementById('login-error').textContent = 'Credenciales inválidas';
+          return;
+        }
+
+        const userDoc = snapshot.docs[0];
+        currentUser = userDoc.data();
+        currentUserRole = currentUser.rol;
+
+        document.getElementById('login').classList.add('hidden');
+        document.getElementById('menu').classList.remove('hidden');
+
+        mostrarProductos();
+        if (currentUserRole === 'admin') {
+          document.getElementById('admin-panel').classList.remove('hidden');
+        } else {
+          document.getElementById('admin-panel').classList.add('hidden');
+        }
+
+      } catch (err) {
+        document.getElementById('login-error').textContent = 'Error al iniciar sesión';
+      }
+    }
+
     function mostrarProductos() {
       document.getElementById('productos').classList.remove('hidden');
       document.getElementById('dashboard').classList.add('hidden');
+      document.getElementById('admin-panel').classList.add('hidden');
 
       const contenedor = document.getElementById('productos');
       contenedor.innerHTML = '';
@@ -103,8 +153,8 @@
       db.collection('vehiculos').get().then(snapshot => {
         snapshot.forEach(doc => {
           const v = doc.data();
-          const minutos = 10;
-          const precio = 5;
+          const minutos = v.tipo === 'carro' ? 15 : 10;
+          const precio = v.tipo === 'carro' ? 10 : 5;
 
           const div = document.createElement('div');
           div.classList.add('producto');
@@ -114,14 +164,14 @@
             <p>${v.description}</p>
             <p>Precio: S/${precio} por ${minutos} minutos</p>
             <div class="timer" id="timer-${doc.id}" style="display:none;">00:00</div>
-            <button onclick="iniciarAlquiler('${doc.id}', ${minutos}, ${precio})">Alquilar</button>
+            <button class="btn-time"  onclick="iniciarAlquiler('${doc.id}', ${minutos}, ${precio}, '${v.name}')">Alquilar</button>
           `;
           contenedor.appendChild(div);
         });
       });
     }
 
-    function iniciarAlquiler(id, minutos, precio) {
+    function iniciarAlquiler(id, minutos, precio, nombreVehiculo) {
       const timerEl = document.getElementById(`timer-${id}`);
       timerEl.style.display = 'block';
       let tiempo = minutos * 60;
@@ -131,9 +181,12 @@
 
       db.collection('ventas').add({
         vehiculoId: id,
+        nombreVehiculo: nombreVehiculo,
         precio,
         metodo: metodoPago,
-        fecha
+        fecha,
+        usuarioEmail: currentUser.email,
+        timestamp: new Date()
       });
 
       const intervalo = setInterval(() => {
@@ -148,30 +201,88 @@
     }
 
     function mostrarDashboard() {
+      if (!currentUserRole) return;
+      if (!['admin', 'empleado'].includes(currentUserRole)) return;
+
       document.getElementById('productos').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+      document.getElementById('admin-panel').classList.add('hidden');
+
       const dashboard = document.getElementById('dashboard');
-      dashboard.classList.remove('hidden');
       dashboard.innerHTML = '<h2>Dashboard</h2>';
 
       const hoy = new Date().toISOString().split('T')[0];
 
       db.collection('ventas').where('fecha', '==', hoy).get().then(snapshot => {
         let total = 0, yape = 0, efectivo = 0;
+        const ventas = [];
         snapshot.forEach(doc => {
           const v = doc.data();
           total += v.precio;
           if (v.metodo === 'yape') yape += v.precio;
           else if (v.metodo === 'efectivo') efectivo += v.precio;
+          ventas.push(v);
         });
+
         dashboard.innerHTML += `
           <p>Total generado hoy: S/${total}</p>
           <p>Pagos por Yape: S/${yape}</p>
           <p>Pagos en Efectivo: S/${efectivo}</p>
+          <h3>Ventas del día</h3>
+          <ul>
+            ${ventas.map(v => `<li>${v.nombreVehiculo} - S/${v.precio} - ${v.metodo}</li>`).join('')}
+          </ul>
         `;
       });
     }
+function cerrarSesion() {
+  currentUser = null;
+  currentUserRole = null;
 
-    mostrarProductos();
+  // Ocultar secciones protegidas
+  document.getElementById('productos').classList.add('hidden');
+  document.getElementById('dashboard').classList.add('hidden');
+  document.getElementById('admin-panel').classList.add('hidden');
+  document.getElementById('menu').classList.add('hidden');
+
+  // Mostrar login
+  document.getElementById('login').classList.remove('hidden');
+
+  // Limpiar campos por seguridad
+  document.getElementById('email').value = '';
+  document.getElementById('password').value = '';
+  document.getElementById('login-error').textContent = '';
+}
+    function mostrarAdminPanel() {
+      if (currentUserRole === 'admin') {
+        document.getElementById('admin-panel').classList.remove('hidden');
+        document.getElementById('productos').classList.add('hidden');
+        document.getElementById('dashboard').classList.add('hidden');
+      }
+    }
+
+    function agregarVehiculo() {
+      const nombre = document.getElementById('nuevo-nombre').value;
+      const descripcion = document.getElementById('nueva-descripcion').value;
+      const imageUrl = document.getElementById('nueva-imagen').value;
+      const tipo = document.getElementById('nuevo-tipo').value;
+
+      if (!nombre || !descripcion || !imageUrl || !tipo) {
+        document.getElementById('admin-msg').textContent = 'Completa todos los campos';
+        return;
+      }
+
+      db.collection('vehiculos').add({ name: nombre, description: descripcion, imageUrl, tipo, status: 'available' })
+        .then(() => {
+          document.getElementById('admin-msg').textContent = 'Vehículo agregado correctamente';
+          document.getElementById('nuevo-nombre').value = '';
+          document.getElementById('nueva-descripcion').value = '';
+          document.getElementById('nueva-imagen').value = '';
+        })
+        .catch(() => {
+          document.getElementById('admin-msg').textContent = 'Error al guardar el vehículo';
+        });
+    }
   </script>
 </body>
 </html>

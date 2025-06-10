@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Alquiler de Carros</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    header {
+      background: #6200ea;
+      color: white;
+      text-align: center;
+      padding: 1rem;
+    }
+
+    #productos, #dashboard {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+
+    .producto {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .producto img {
+      width: 100%;
+      max-width: 300px;
+      border-radius: 8px;
+    }
+
+    .timer {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin: 0.5rem 0;
+      color: #d32f2f;
+    }
+
+    footer {
+      display: flex;
+      justify-content: space-around;
+      padding: 1rem;
+      background: #eee;
+      border-top: 1px solid #ccc;
+    }
+
+    footer button {
+      background: none;
+      border: none;
+      font-size: 1rem;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  
+
+  <div id="productos"></div>
+  <div id="dashboard" class="hidden"></div>
+
+  <footer>
+    <button onclick="mostrarProductos()">Home</button>
+    <button onclick="mostrarDashboard()">Dashboard</button>
+  </footer>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCwt9dyCf5iF13R2nhar6F2pKIUkT3Om7Q",
+      authDomain: "paguinasweb-14611.firebaseapp.com",
+      projectId: "paguinasweb-14611",
+      storageBucket: "paguinasweb-14611.firebasestorage.app",
+      messagingSenderId: "1083919701171",
+      appId: "1:1083919701171:web:89d0063a1f9e6e357c4cc6"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    function mostrarProductos() {
+      document.getElementById('productos').classList.remove('hidden');
+      document.getElementById('dashboard').classList.add('hidden');
+
+      const contenedor = document.getElementById('productos');
+      contenedor.innerHTML = '';
+
+      db.collection('vehiculos').get().then(snapshot => {
+        snapshot.forEach(doc => {
+          const v = doc.data();
+          const minutos = 10;
+          const precio = 5;
+
+          const div = document.createElement('div');
+          div.classList.add('producto');
+          div.innerHTML = `
+            <img src="${v.imageUrl}" alt="${v.name}">
+            <h3>${v.name}</h3>
+            <p>${v.description}</p>
+            <p>Precio: S/${precio} por ${minutos} minutos</p>
+            <div class="timer" id="timer-${doc.id}" style="display:none;">00:00</div>
+            <button onclick="iniciarAlquiler('${doc.id}', ${minutos}, ${precio})">Alquilar</button>
+          `;
+          contenedor.appendChild(div);
+        });
+      });
+    }
+
+    function iniciarAlquiler(id, minutos, precio) {
+      const timerEl = document.getElementById(`timer-${id}`);
+      timerEl.style.display = 'block';
+      let tiempo = minutos * 60;
+
+      const metodoPago = prompt('¿Método de pago? (yape o efectivo)').toLowerCase();
+      const fecha = new Date().toISOString().split('T')[0];
+
+      db.collection('ventas').add({
+        vehiculoId: id,
+        precio,
+        metodo: metodoPago,
+        fecha
+      });
+
+      const intervalo = setInterval(() => {
+        const min = Math.floor(tiempo / 60);
+        const seg = tiempo % 60;
+        timerEl.textContent = `${min.toString().padStart(2, '0')}:${seg.toString().padStart(2, '0')}`;
+        if (--tiempo < 0) {
+          clearInterval(intervalo);
+          timerEl.textContent = 'Finalizado';
+        }
+      }, 1000);
+    }
+
+    function mostrarDashboard() {
+      document.getElementById('productos').classList.add('hidden');
+      const dashboard = document.getElementById('dashboard');
+      dashboard.classList.remove('hidden');
+      dashboard.innerHTML = '<h2>Dashboard</h2>';
+
+      const hoy = new Date().toISOString().split('T')[0];
+
+      db.collection('ventas').where('fecha', '==', hoy).get().then(snapshot => {
+        let total = 0, yape = 0, efectivo = 0;
+        snapshot.forEach(doc => {
+          const v = doc.data();
+          total += v.precio;
+          if (v.metodo === 'yape') yape += v.precio;
+          else if (v.metodo === 'efectivo') efectivo += v.precio;
+        });
+        dashboard.innerHTML += `
+          <p>Total generado hoy: S/${total}</p>
+          <p>Pagos por Yape: S/${yape}</p>
+          <p>Pagos en Efectivo: S/${efectivo}</p>
+        `;
+      });
+    }
+
+    mostrarProductos();
+  </script>
+</body>
+</html>
